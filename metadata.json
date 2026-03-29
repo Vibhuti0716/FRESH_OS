@@ -1,0 +1,7 @@
+{
+  "name": "FRESHOS",
+  "description": "Futuristic logistics dashboard for route optimization based on AQI and freshness preservation.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

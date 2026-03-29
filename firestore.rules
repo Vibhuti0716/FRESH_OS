@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - displayName: string (optional)
+    //   - email: string (required, email format)
+    //   - role: string (required, 'admin' or 'user')
+    //   - settings: map (optional)
+    //
+    // Collection: trucks
+    // Document ID: {truckId}
+    // Fields:
+    //   - name: string (required)
+    //   - status: string (required, 'Active'|'Delayed'|'Maintenance')
+    //   - routeHealth: integer (optional)
+    //   - freshnessScore: integer (optional)
+    //   - location: map (required, {lat: number, lng: number})
+    //   - lastUpdated: timestamp (optional)
+    //
+    // Collection: routes
+    // Document ID: {routeId}
+    // Fields:
+    //   - truckId: string (required)
+    //   - distance: string (optional)
+    //   - time: string (optional)
+    //   - aqiScore: integer (optional)
+    //   - freshness: integer (optional)
+    //   - savings: string (optional)
+    //   - date: timestamp (required)
+    //   - points: list (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "ravindra7619@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'user'] &&
+             (!('displayName' in data) || data.displayName is string) &&
+             (!('settings' in data) || data.settings is map);
+    }
+
+    function isValidTruck(data) {
+      return data.keys().hasAll(['name', 'status', 'location']) &&
+             data.name is string && data.name.size() < 100 &&
+             data.status in ['Active', 'Delayed', 'Maintenance'] &&
+             data.location is map &&
+             data.location.lat is number && data.location.lng is number;
+    }
+
+    function isValidRoute(data) {
+      return data.keys().hasAll(['truckId', 'date']) &&
+             data.truckId is string &&
+             data.date is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) && request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) && request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /trucks/{truckId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidTruck(request.resource.data);
+    }
+
+    match /routes/{routeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidRoute(request.resource.data);
+    }
+  }
+}

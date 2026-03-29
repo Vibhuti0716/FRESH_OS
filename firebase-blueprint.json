@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "optimizationMode": { "type": "string", "enum": ["distance", "freshness"] },
+            "notificationsEnabled": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "Truck": {
+      "title": "Truck",
+      "description": "Real-time truck tracking data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Delayed", "Maintenance"] },
+        "routeHealth": { "type": "integer" },
+        "freshnessScore": { "type": "integer" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "status", "location"]
+    },
+    "Route": {
+      "title": "Route",
+      "description": "Historical and active route data",
+      "type": "object",
+      "properties": {
+        "truckId": { "type": "string" },
+        "distance": { "type": "string" },
+        "time": { "type": "string" },
+        "aqiScore": { "type": "integer" },
+        "freshness": { "type": "integer" },
+        "savings": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["truckId", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/trucks/{truckId}": {
+      "schema": "Truck",
+      "description": "Real-time truck locations"
+    },
+    "/routes/{routeId}": {
+      "schema": "Route",
+      "description": "Historical route records"
+    }
+  }
+}
